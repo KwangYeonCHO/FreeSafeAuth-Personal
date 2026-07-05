@@ -217,4 +217,4 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## License
 
-No license has been selected yet.
+This project is released under the MIT License. See [LICENSE](LICENSE).
