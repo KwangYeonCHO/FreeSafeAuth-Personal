@@ -34,12 +34,15 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,12 +50,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +75,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -83,10 +90,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -133,6 +144,47 @@ class MainActivity : FragmentActivity() {
 enum class Screen { Home, AddChoice, ManualAdd, EditAccount, Scan, Settings }
 
 enum class BackupAction { Export, Import }
+
+private val SafeGreen = Color(0xFF22A652)
+private val DeepGreen = Color(0xFF0B3D2E)
+private val ForestGreen = Color(0xFF176C3A)
+private val MintSurface = Color(0xFFF3FAF5)
+private val SoftMint = Color(0xFFE5F5EA)
+private val WarmWhite = Color(0xFFFBFDF9)
+private val Charcoal = Color(0xFF17211B)
+
+private val FreeSafeLightColors = lightColorScheme(
+    primary = SafeGreen,
+    onPrimary = Color.White,
+    primaryContainer = SoftMint,
+    onPrimaryContainer = DeepGreen,
+    secondary = ForestGreen,
+    onSecondary = Color.White,
+    background = MintSurface,
+    onBackground = Charcoal,
+    surface = WarmWhite,
+    onSurface = Charcoal,
+    surfaceVariant = Color(0xFFEAF2EB),
+    onSurfaceVariant = Color(0xFF536158),
+    outline = Color(0xFFC6D7CA),
+    error = Color(0xFFB3261E)
+)
+
+private val FreeSafeDarkColors = darkColorScheme(
+    primary = Color(0xFF63D889),
+    onPrimary = Color(0xFF00391D),
+    primaryContainer = Color(0xFF0F5530),
+    onPrimaryContainer = Color(0xFFC9F3D4),
+    secondary = Color(0xFF91D4A5),
+    background = Color(0xFF07120D),
+    onBackground = Color(0xFFE8F4EA),
+    surface = Color(0xFF101D16),
+    onSurface = Color(0xFFE8F4EA),
+    surfaceVariant = Color(0xFF1B2B22),
+    onSurfaceVariant = Color(0xFFB9C8BD),
+    outline = Color(0xFF405447),
+    error = Color(0xFFFFB4AB)
+)
 
 object AppLanguage {
     var current: String = "system"
@@ -548,7 +600,7 @@ fun FreeSafeAuthApp() {
         if (locked && biometricEnabled) activity?.finish() else goBack()
     }
 
-    MaterialTheme(colorScheme = if (darkMode) darkColorScheme() else lightColorScheme()) {
+    MaterialTheme(colorScheme = if (darkMode) FreeSafeDarkColors else FreeSafeLightColors) {
         Surface(Modifier.fillMaxSize()) {
             if (locked && biometricEnabled) {
                 LockScreen(
@@ -806,28 +858,40 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("FreeSafeAuth Personal") },
-                actions = { TextButton(onClick = onSettings) { Text(t("设置", "Settings", "設定", "설정")) } }
+                title = { Text("FreeSafeAuth", fontWeight = FontWeight.Bold) },
+                actions = { TextButton(onClick = onSettings) { Text(t("设置", "Settings", "設定", "설정")) } },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        floatingActionButton = { FloatingActionButton(onClick = onAdd) { Text("+", fontSize = 28.sp) } }
+        containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAdd,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) { Text("+", fontSize = 28.sp, fontWeight = FontWeight.Medium) }
+        }
     ) { padding ->
-        if (accounts.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(t("暂无验证码，点击右下角 + 添加", "No codes yet. Tap + to add one.", "コードはまだありません。右下の + で追加できます。", "아직 코드가 없습니다. 오른쪽 아래 +를 눌러 추가하세요."))
-            }
-        } else {
-            Column(Modifier.fillMaxSize().padding(padding).padding(12.dp)) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text(t("搜索服务或账号", "Search service or account", "サービスまたはアカウントを検索", "서비스 또는 계정 검색")) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(10.dp))
+        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+            SecurityHeader(accountCount = accounts.size)
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text(t("搜索服务或账号", "Search service or account", "サービスまたはアカウントを検索", "서비스 또는 계정 검색")) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                singleLine = true
+            )
+            Spacer(Modifier.height(14.dp))
+            if (accounts.isEmpty()) {
+                EmptyState(onAdd = onAdd)
+            } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(displays, key = { it.entity.id }) { display ->
                         AccountCard(
@@ -843,7 +907,96 @@ fun HomeScreen(
                             onMoveDown = { vm.move(display.entity, 1) }
                         )
                     }
+                    item { Spacer(Modifier.height(72.dp)) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SecurityHeader(accountCount: Int) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("2FA", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    t("本地安全令牌", "Local security vault", "ローカルセキュリティ保管庫", "로컬 보안 저장소"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                t("${accountCount} 个", "$accountCount", "${accountCount} 件", "${accountCount}개"),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyState(onAdd: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("2FA", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+            }
+            Text(
+                t("还没有验证码", "No codes yet", "コードはまだありません", "아직 코드가 없습니다"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                t("添加第一个账号后，验证码会在这里安全显示。", "Add your first account to show secure codes here.", "最初のアカウントを追加すると、ここに安全に表示されます。", "첫 계정을 추가하면 이곳에 안전하게 표시됩니다."),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onAdd) {
+                Text(t("添加账号", "Add account", "アカウントを追加", "계정 추가"))
             }
         }
     }
@@ -865,8 +1018,10 @@ fun AccountCard(
 
     Card(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onCopy, onLongClick = { menuOpen = true }),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Box {
             Row(
@@ -874,22 +1029,43 @@ fun AccountCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        display.entity.issuer.take(1).uppercase(Locale.getDefault()).ifBlank { "2" },
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(display.entity.issuer, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(display.entity.accountName, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(display.entity.issuer, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(display.entity.accountName, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(10.dp))
                     Text(
                         if (hideCode) "*** ***" else formatCode(display.code),
                         modifier = Modifier.clickable { onCopy() },
                         fontFamily = FontFamily.Monospace,
                         fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(progress = { display.progress }, modifier = Modifier.size(54.dp))
-                        Text("${display.secondsLeft}s", fontSize = 13.sp)
+                        CircularProgressIndicator(
+                            progress = { display.progress },
+                            modifier = Modifier.size(54.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                        Text("${display.secondsLeft}s", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                     TextButton(onClick = { menuOpen = true }) { Text(t("更多", "More", "その他", "더보기")) }
                 }
@@ -934,10 +1110,44 @@ fun AccountCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddChoiceScreen(onBack: () -> Unit, onManual: () -> Unit, onScan: () -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text(t("添加账号", "Add account", "アカウントを追加", "계정 추가")) }, navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) { Text(t("扫描二维码", "Scan QR code", "QRコードをスキャン", "QR 코드 스캔")) }
-            OutlinedButton(onClick = onManual, modifier = Modifier.fillMaxWidth()) { Text(t("手动输入密钥", "Enter secret manually", "シークレットを手入力", "Secret Key 직접 입력")) }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(t("添加账号", "Add account", "アカウントを追加", "계정 추가")) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        t("选择添加方式", "Choose an add method", "追加方法を選択", "추가 방법 선택"),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        t("扫描二维码最快；也可以手动输入 Secret Key。", "Scan a QR code for the fastest setup, or enter a Secret Key manually.", "QRコードをスキャンするか、Secret Key を手入力できます。", "QR 코드를 스캔하거나 Secret Key를 직접 입력할 수 있습니다."),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Button(
+                onClick = onScan,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) { Text(t("扫描二维码", "Scan QR code", "QRコードをスキャン", "QR 코드 스캔")) }
+            OutlinedButton(
+                onClick = onManual,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(14.dp)
+            ) { Text(t("手动输入密钥", "Enter secret manually", "シークレットを手入力", "Secret Key 직접 입력")) }
         }
     }
 }
@@ -958,8 +1168,23 @@ fun ManualAddScreen(
     var algorithm by remember(initial) { mutableStateOf(initial?.algorithm ?: "SHA1") }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } }) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(issuer, { issuer = it }, label = { Text(t("服务名称", "Service name", "サービス名", "서비스 이름")) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(account, { account = it }, label = { Text(t("账号名称", "Account name", "アカウント名", "계정 이름")) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(secret, { secret = it }, label = { Text("Secret Key") }, modifier = Modifier.fillMaxWidth())
@@ -990,6 +1215,8 @@ fun ManualAddScreen(
                     }
                 }
             ) { Text(t("保存", "Save", "保存", "저장")) }
+                }
+            }
         }
     }
 }
@@ -1083,6 +1310,32 @@ fun CameraScanner(onRawValue: (String) -> Unit) {
     )
 }
 
+@Composable
+fun SettingsPanel(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(
+        text,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleMedium
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -1108,68 +1361,118 @@ fun SettingsScreen(
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(t("设置", "Settings", "設定", "설정")) }, navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } }) }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(t("设置", "Settings", "設定", "설정"), fontWeight = FontWeight.Bold) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(t("返回", "Back", "戻る", "뒤로")) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(t("安全设置", "Security", "セキュリティ", "보안 설정"), fontWeight = FontWeight.Bold)
-            Text(t("Secret Key 已使用 Android Keystore + AES-GCM 加密保存在本机。", "Secret keys are encrypted locally with Android Keystore + AES-GCM.", "Secret Key は Android Keystore + AES-GCM で端末内に暗号化保存されます。", "Secret Key는 Android Keystore + AES-GCM으로 기기에 암호화 저장됩니다."))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("生物识别解锁", "Biometric unlock", "生体認証ロック解除", "생체 인식 잠금 해제"))
-                Switch(checked = biometricEnabled, onCheckedChange = onBiometricEnabledChange, enabled = biometricAvailable)
-            }
-            if (!biometricAvailable) {
-                Text(t("当前设备不支持生物识别", "Biometrics are not supported on this device", "この端末は生体認証に対応していません", "이 기기는 생체 인식을 지원하지 않습니다"), color = MaterialTheme.colorScheme.error)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("进入后台后自动锁定", "Auto-lock after backgrounding", "バックグラウンド移行後に自動ロック", "백그라운드 전환 후 자동 잠금"))
-                Switch(checked = autoLockEnabled, onCheckedChange = onAutoLockEnabledChange)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("自动锁定时间", "Auto-lock delay", "自動ロック時間", "자동 잠금 시간") + "：${autoLockLabel(autoLockSeconds)}")
-                OutlinedButton(onClick = { onAutoLockSecondsChange(nextAutoLockSeconds(autoLockSeconds)) }) {
-                    Text(t("切换", "Change", "切替", "변경"))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("2FA", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text("FreeSafeAuth Personal", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            t("本地优先的安全设置", "Local-first security settings", "ローカル優先のセキュリティ設定", "로컬 우선 보안 설정"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("复制后 30 秒清空剪贴板", "Clear clipboard 30s after copy", "コピー後30秒でクリップボードを消去", "복사 후 30초 뒤 클립보드 지우기"))
-                Switch(checked = clearClipboard, onCheckedChange = onClearClipboardChange)
-            }
-            Text(t("显示设置", "Display", "表示", "표시 설정"), fontWeight = FontWeight.Bold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("隐藏验证码", "Hide codes", "コードを非表示", "인증 코드 숨기기"))
-                Switch(checked = hideCodes, onCheckedChange = onHideCodesChange)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("深色模式", "Dark mode", "ダークモード", "다크 모드"))
-                Switch(checked = darkMode, onCheckedChange = onDarkModeChange)
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(t("语言", "Language", "言語", "언어"))
-                OutlinedButton(onClick = { showLanguageDialog = true }) {
-                    Text(languageLabel(appLanguage))
+
+            SettingsPanel {
+                SectionTitle(t("安全设置", "Security", "セキュリティ", "보안 설정"))
+                Text(t("Secret Key 已使用 Android Keystore + AES-GCM 加密保存在本机。", "Secret keys are encrypted locally with Android Keystore + AES-GCM.", "Secret Key は Android Keystore + AES-GCM で端末内に暗号化保存されます。", "Secret Key는 Android Keystore + AES-GCM으로 기기에 암호화 저장됩니다."), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("生物识别解锁", "Biometric unlock", "生体認証ロック解除", "생체 인식 잠금 해제"))
+                    Switch(checked = biometricEnabled, onCheckedChange = onBiometricEnabledChange, enabled = biometricAvailable)
+                }
+                if (!biometricAvailable) {
+                    Text(t("当前设备不支持生物识别", "Biometrics are not supported on this device", "この端末は生体認証に対応していません", "이 기기는 생체 인식을 지원하지 않습니다"), color = MaterialTheme.colorScheme.error)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("进入后台后自动锁定", "Auto-lock after backgrounding", "バックグラウンド移行後に自動ロック", "백그라운드 전환 후 자동 잠금"))
+                    Switch(checked = autoLockEnabled, onCheckedChange = onAutoLockEnabledChange)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("自动锁定时间", "Auto-lock delay", "自動ロック時間", "자동 잠금 시간") + "：${autoLockLabel(autoLockSeconds)}")
+                    OutlinedButton(onClick = { onAutoLockSecondsChange(nextAutoLockSeconds(autoLockSeconds)) }) {
+                        Text(t("切换", "Change", "切替", "변경"))
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("复制后 30 秒清空剪贴板", "Clear clipboard 30s after copy", "コピー後30秒でクリップボードを消去", "복사 후 30초 뒤 클립보드 지우기"))
+                    Switch(checked = clearClipboard, onCheckedChange = onClearClipboardChange)
                 }
             }
-            Text(t("数据管理", "Data", "データ管理", "데이터 관리"), fontWeight = FontWeight.Bold)
-            Text(t(
-                "紧急恢复说明：请定期导出加密备份，并妥善保存备份密码。备份密码丢失后无法恢复备份内容。",
-                "Emergency recovery: export encrypted backups regularly and keep the backup password safe. Lost backup passwords cannot be recovered.",
-                "緊急復旧：暗号化バックアップを定期的にエクスポートし、バックアップパスワードを安全に保管してください。紛失したパスワードは復元できません。",
-                "긴급 복구: 암호화 백업을 정기적으로 내보내고 백업 비밀번호를 안전하게 보관하세요. 잃어버린 백업 비밀번호는 복구할 수 없습니다."
-            ))
-            Button(onClick = onExportBackup, modifier = Modifier.fillMaxWidth()) { Text(t("导出加密备份", "Export encrypted backup", "暗号化バックアップをエクスポート", "암호화 백업 내보내기")) }
-            OutlinedButton(onClick = onImportBackup, modifier = Modifier.fillMaxWidth()) { Text(t("导入加密备份", "Import encrypted backup", "暗号化バックアップをインポート", "암호화 백업 가져오기")) }
-            Text(t("关于", "About", "情報", "정보"), fontWeight = FontWeight.Bold)
-            Text("FreeSafeAuth Personal")
-            Text(t("版本", "Version", "バージョン", "버전") + " ${BuildConfig.VERSION_NAME}")
-            Text(t("个人使用的本地 TOTP 验证码工具。无广告、无统计、无登录、无服务器。", "A local TOTP authenticator for personal use. No ads, no analytics, no login, no server.", "個人利用向けのローカル TOTP 認証アプリです。広告、解析、ログイン、サーバーはありません。", "개인용 로컬 TOTP 인증 앱입니다. 광고, 통계, 로그인, 서버가 없습니다."))
-            OutlinedButton(onClick = onOpenRepository, modifier = Modifier.fillMaxWidth()) {
-                Text(t("访问开源仓库", "Open source repository", "オープンソースリポジトリを開く", "오픈소스 저장소 열기"))
+
+            SettingsPanel {
+                SectionTitle(t("显示设置", "Display", "表示", "표시 설정"))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("隐藏验证码", "Hide codes", "コードを非表示", "인증 코드 숨기기"))
+                    Switch(checked = hideCodes, onCheckedChange = onHideCodesChange)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("深色模式", "Dark mode", "ダークモード", "다크 모드"))
+                    Switch(checked = darkMode, onCheckedChange = onDarkModeChange)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(t("语言", "Language", "言語", "언어"))
+                    OutlinedButton(onClick = { showLanguageDialog = true }) {
+                        Text(languageLabel(appLanguage))
+                    }
+                }
+            }
+
+            SettingsPanel {
+                SectionTitle(t("数据管理", "Data", "データ管理", "데이터 관리"))
+                Text(t(
+                    "紧急恢复说明：请定期导出加密备份，并妥善保存备份密码。备份密码丢失后无法恢复备份内容。",
+                    "Emergency recovery: export encrypted backups regularly and keep the backup password safe. Lost backup passwords cannot be recovered.",
+                    "緊急復旧：暗号化バックアップを定期的にエクスポートし、バックアップパスワードを安全に保管してください。紛失したパスワードは復元できません。",
+                    "긴급 복구: 암호화 백업을 정기적으로 내보내고 백업 비밀번호를 안전하게 보관하세요. 잃어버린 백업 비밀번호는 복구할 수 없습니다."
+                ), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = onExportBackup, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                    Text(t("导出加密备份", "Export encrypted backup", "暗号化バックアップをエクスポート", "암호화 백업 내보내기"))
+                }
+                OutlinedButton(onClick = onImportBackup, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                    Text(t("导入加密备份", "Import encrypted backup", "暗号化バックアップをインポート", "암호화 백업 가져오기"))
+                }
+            }
+
+            SettingsPanel {
+                SectionTitle(t("关于", "About", "情報", "정보"))
+                Text("FreeSafeAuth Personal", fontWeight = FontWeight.Bold)
+                Text(t("版本", "Version", "バージョン", "버전") + " ${BuildConfig.VERSION_NAME}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(t("个人使用的本地 TOTP 验证码工具。无广告、无统计、无登录、无服务器。", "A local TOTP authenticator for personal use. No ads, no analytics, no login, no server.", "個人利用向けのローカル TOTP 認証アプリです。広告、解析、ログイン、サーバーはありません。", "개인용 로컬 TOTP 인증 앱입니다. 광고, 통계, 로그인, 서버가 없습니다."), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = onOpenRepository, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                    Text(t("访问开源仓库", "Open source repository", "オープンソースリポジトリを開く", "오픈소스 저장소 열기"))
+                }
             }
         }
     }
@@ -1209,11 +1512,46 @@ fun LockScreen(biometricAvailable: Boolean, onUnlock: () -> Unit) {
         if (biometricAvailable) onUnlock()
     }
 
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("FreeSafeAuth Personal", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(if (biometricAvailable) t("需要通过生物识别解锁", "Biometric unlock is required", "生体認証でロック解除してください", "생체 인식으로 잠금 해제해야 합니다") else t("当前设备不支持生物识别", "Biometrics are not supported on this device", "この端末は生体認証に対応していません", "이 기기는 생체 인식을 지원하지 않습니다"))
-            Button(onClick = onUnlock, enabled = biometricAvailable) { Text(t("解锁", "Unlock", "ロック解除", "잠금 해제")) }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(26.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("2FA", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                }
+                Text("FreeSafeAuth Personal", fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(
+                    if (biometricAvailable) t("需要通过生物识别解锁", "Biometric unlock is required", "生体認証でロック解除してください", "생체 인식으로 잠금 해제해야 합니다") else t("当前设备不支持生物识别", "Biometrics are not supported on this device", "この端末は生体認証に対応していません", "이 기기는 생체 인식을 지원하지 않습니다"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Button(
+                    onClick = onUnlock,
+                    enabled = biometricAvailable,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) { Text(t("解锁", "Unlock", "ロック解除", "잠금 해제")) }
+            }
         }
     }
 }
