@@ -93,8 +93,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -454,6 +457,7 @@ fun FreeSafeAuthApp() {
     var backupPreview by remember { mutableStateOf<BackupPreview?>(null) }
     var showLocalFileBrowser by remember { mutableStateOf(false) }
     var locked by remember { mutableStateOf(false) }
+    var screenshotUnlockActive by remember { mutableStateOf(false) }
     var backgroundAt by remember { mutableLongStateOf(0L) }
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     var hideCodes by remember {
@@ -526,6 +530,35 @@ fun FreeSafeAuthApp() {
         if (biometricEnabled) locked = true
     }
 
+    LaunchedEffect(activity, screenshotUnlockActive) {
+        val window = activity?.window ?: return@LaunchedEffect
+        if (screenshotUnlockActive) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            delay(15_000)
+            if (screenshotUnlockActive) {
+                screenshotUnlockActive = false
+                Toast.makeText(currentContext, t("截屏授权已过期", "Screenshot permission expired", "スクリーンショット許可が期限切れです", "스크린샷 허용 시간이 만료되었습니다"), Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
+    DisposableEffect(activity, screenshotUnlockActive) {
+        if (screenshotUnlockActive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && activity != null) {
+            val callback = Activity.ScreenCaptureCallback {
+                if (screenshotUnlockActive) {
+                    screenshotUnlockActive = false
+                    Toast.makeText(currentContext, t("已重新锁定截屏", "Screenshots locked again", "スクリーンショットを再ロックしました", "스크린샷을 다시 잠갔습니다"), Toast.LENGTH_SHORT).show()
+                }
+            }
+            activity.registerScreenCaptureCallback(ContextCompat.getMainExecutor(activity), callback)
+            onDispose { activity.unregisterScreenCaptureCallback(callback) }
+        } else {
+            onDispose { }
+        }
+    }
+
     DisposableEffect(autoLockEnabled, autoLockSeconds, biometricEnabled) {
         val owner = activity
         val observer = LifecycleEventObserver { _, event ->
@@ -596,6 +629,20 @@ fun FreeSafeAuthApp() {
         }
     }
 
+    fun allowOneScreenshot() {
+        if (biometricAvailable && activity is FragmentActivity) {
+            activity.authenticate(
+                onSuccess = {
+                    screenshotUnlockActive = true
+                    Toast.makeText(currentContext, t("已允许截屏一次", "One screenshot is allowed", "スクリーンショットを1回許可しました", "스크린샷 1회를 허용했습니다"), Toast.LENGTH_SHORT).show()
+                },
+                onError = { Toast.makeText(currentContext, it, Toast.LENGTH_SHORT).show() }
+            )
+        } else {
+            Toast.makeText(currentContext, t("当前设备不支持生物识别", "Biometrics are not supported on this device", "この端末は生体認証に対応していません", "이 기기는 생체 인식을 지원하지 않습니다"), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     BackHandler {
         if (locked && biometricEnabled) activity?.finish() else goBack()
     }
@@ -612,7 +659,9 @@ fun FreeSafeAuthApp() {
                     vm = vm,
                     hideCodes = hideCodes,
                     clearClipboard = clearClipboard,
+                    screenshotUnlockActive = screenshotUnlockActive,
                     onAdd = { navigateTo(Screen.AddChoice) },
+                    onAllowScreenshot = { allowOneScreenshot() },
                     onSettings = { navigateTo(Screen.Settings) },
                     onEdit = { account ->
                         editingAccount = account
@@ -834,7 +883,9 @@ fun HomeScreen(
     vm: HomeViewModel,
     hideCodes: Boolean,
     clearClipboard: Boolean,
+    screenshotUnlockActive: Boolean,
     onAdd: () -> Unit,
+    onAllowScreenshot: () -> Unit,
     onSettings: () -> Unit,
     onEdit: (TotpAccountEntity) -> Unit
 ) {
@@ -859,7 +910,12 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("FreeSafeAuth", fontWeight = FontWeight.Bold) },
-                actions = { TextButton(onClick = onSettings) { Text(t("设置", "Settings", "設定", "설정")) } },
+                actions = {
+                    TextButton(onClick = onAllowScreenshot, enabled = !screenshotUnlockActive) {
+                        Text(if (screenshotUnlockActive) t("已解锁", "Unlocked", "解除中", "허용됨") else t("截屏一次", "One shot", "1回撮影", "1회 캡처"))
+                    }
+                    TextButton(onClick = onSettings) { Text(t("设置", "Settings", "設定", "설정")) }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -1566,6 +1622,14 @@ fun BackupPasswordDialog(
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val isExport = action == BackupAction.Export
+    val passwordFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(action) {
+        delay(250)
+        passwordFocusRequester.requestFocus()
+        keyboardController?.show()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1580,7 +1644,12 @@ fun BackupPasswordDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(if (isExport) t("请输入备份密码。请妥善保存，丢失后无法恢复备份。", "Enter a backup password. Keep it safe; backups cannot be recovered without it.", "バックアップパスワードを入力してください。紛失するとバックアップを復元できません。", "백업 비밀번호를 입력하세요. 잃어버리면 백업을 복구할 수 없습니다.") else t("请输入备份密码。", "Enter the backup password.", "バックアップパスワードを入力してください。", "백업 비밀번호를 입력하세요."))
-                OutlinedTextField(password, { password = it }, label = { Text(t("备份密码", "Backup password", "バックアップパスワード", "백업 비밀번호")) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    password,
+                    { password = it },
+                    label = { Text(t("备份密码", "Backup password", "バックアップパスワード", "백업 비밀번호")) },
+                    modifier = Modifier.fillMaxWidth().focusRequester(passwordFocusRequester)
+                )
                 if (isExport) {
                     OutlinedTextField(confirm, { confirm = it }, label = { Text(t("再次确认密码", "Confirm password", "パスワードを再入力", "비밀번호 다시 입력")) }, modifier = Modifier.fillMaxWidth())
                 }
