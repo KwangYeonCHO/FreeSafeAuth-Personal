@@ -1782,6 +1782,7 @@ fun FragmentActivity.authenticate(onSuccess: () -> Unit, onError: (String) -> Un
     val info = BiometricPrompt.PromptInfo.Builder()
         .setTitle(t("解锁 FreeSafeAuth Personal", "Unlock FreeSafeAuth Personal", "FreeSafeAuth Personal をロック解除", "FreeSafeAuth Personal 잠금 해제"))
         .setSubtitle(t("验证通过后才能查看验证码", "Authenticate to view your codes", "認証後にコードを表示できます", "인증 후 코드를 볼 수 있습니다"))
+        .setConfirmationRequired(false)
         .setNegativeButtonText(t("取消", "Cancel", "キャンセル", "취소"))
         .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
         .build()
