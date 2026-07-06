@@ -1,5 +1,14 @@
 # FreeSafeAuth Personal
 
+<p align="center">
+  <img src="docs/images/app-icon.png" alt="FreeSafeAuth Personal app icon" width="96" height="96">
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshot-home.jpg" alt="FreeSafeAuth home screen" width="260">
+  <img src="docs/images/screenshot-settings.jpg" alt="FreeSafeAuth settings screen" width="260">
+</p>
+
 FreeSafeAuth Personal is a local, ad-free Android TOTP authenticator for personal use. It generates 2FA verification codes on-device and stores account secrets locally with Android Keystore-backed AES-GCM encryption.
 
 Languages: [English](#english) | [中文](#中文) | [한국어](#한국어)
