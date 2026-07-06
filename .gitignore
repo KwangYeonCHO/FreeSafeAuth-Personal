@@ -2,9 +2,9 @@
 build/
 app/build/
 local.properties
+.codex-remote-attachments/
 *.apk
 *.aab
 *.ap_
 *.jks
 *.keystore
-

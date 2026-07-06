@@ -35,7 +35,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +57,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -208,14 +206,6 @@ fun languageLabel(code: String): String = when (code) {
     "ja" -> "日本語"
     "ko" -> "한국어"
     else -> t("跟随系统", "Follow system", "システムに従う", "시스템 언어")
-}
-
-fun nextLanguage(code: String): String = when (code) {
-    "system" -> "zh"
-    "zh" -> "en"
-    "en" -> "ja"
-    "ja" -> "ko"
-    else -> "system"
 }
 
 data class TotpDisplay(
